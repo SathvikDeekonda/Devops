@@ -2,7 +2,7 @@ name: Build and Notify
 
 on:
   push:
-    branches: [ master ]   
+    branches: [ master ]
 
 jobs:
   build:
@@ -25,7 +25,7 @@ jobs:
       - name: Notify Telegram
         if: always()
         run: |
-          curl -X POST https://https://avril-parallelepipedous-unlethally.ngrok-free.dev//notify \
+          curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
             -H "Content-Type: application/json" \
             -d "{
               \"repo\": \"${{ github.repository }}\",
@@ -37,3 +37,4 @@ jobs:
               \"commit_id\": \"${{ github.event.head_commit.id }}\",
               \"changed_files\": \"${{ env.CHANGED_FILES }}\"
             }"
+
