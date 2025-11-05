@@ -2,7 +2,16 @@ name: Build and Notify
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+  pull_request:
+    types: [opened, reopened, closed]
+  create:
+    branches:
+      - "*"
+  delete:
+    branches:
+      - "*"
 
 jobs:
   build:
@@ -12,14 +21,60 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 1️⃣ Notify build start
+      # 1️⃣ Identify the event type
+      - name: Log Event Type
+        run: echo "GitHub event: ${{ github.event_name }}"
+
+      # 2️⃣ Handle branch creation
+      - name: Notify Branch Creation
+        if: github.event_name == 'create'
+        run: |
+          curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"${{ github.repository }}\",
+              \"event\": \"create\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"pusher\": \"${{ github.actor }}\"
+            }"
+
+      # 3️⃣ Handle branch deletion
+      - name: Notify Branch Deletion
+        if: github.event_name == 'delete'
+        run: |
+          curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"${{ github.repository }}\",
+              \"event\": \"delete\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"pusher\": \"${{ github.actor }}\"
+            }"
+
+      # 4️⃣ Handle pull requests
+      - name: Notify Pull Request
+        if: github.event_name == 'pull_request'
+        run: |
+          curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"${{ github.repository }}\",
+              \"event\": \"pull_request\",
+              \"branch\": \"${{ github.head_ref }}\",
+              \"pusher\": \"${{ github.actor }}\",
+              \"action\": \"${{ github.event.action }}\"
+            }"
+
+      # 5️⃣ Notify build start (only for push)
       - name: Notify Build Start
+        if: github.event_name == 'push'
         run: |
           echo "Sending 'build started' notification..."
           curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
             -H "Content-Type: application/json" \
             -d "{
               \"repo\": \"${{ github.repository }}\",
+              \"event\": \"push\",
               \"status\": \"started\",
               \"branch\": \"${{ github.ref_name }}\",
               \"pusher\": \"${{ github.actor }}\",
@@ -27,20 +82,23 @@ jobs:
               \"commit_id\": \"${{ github.event.head_commit.id }}\"
             }"
 
-      - name: Simulate build
+      # 6️⃣ Simulate the build
+      - name: Simulate Build
+        if: github.event_name == 'push'
         run: |
           echo "Building project..."
-          sleep 5  # simulate build time
+          sleep 5
 
-      # 2️⃣ Notify build completion
+      # 7️⃣ Notify build completion
       - name: Notify Build Completion
-        if: always()
+        if: github.event_name == 'push' && always()
         run: |
           echo "Sending 'build completed' notification..."
           curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
             -H "Content-Type: application/json" \
             -d "{
               \"repo\": \"${{ github.repository }}\",
+              \"event\": \"push\",
               \"status\": \"${{ job.status }}\",
               \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
               \"branch\": \"${{ github.ref_name }}\",
