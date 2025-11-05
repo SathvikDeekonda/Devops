@@ -1,0 +1,39 @@
+name: Build and Notify
+
+on:
+  push:
+    branches: [ master ]   # because your repo uses master, not main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Collect commit info
+        id: info
+        run: |
+          echo "CHANGED_FILES<<EOF" >> $GITHUB_ENV
+          git diff --name-only HEAD^ HEAD >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Simulate build
+        run: echo "Building project..."
+
+      - name: Notify Telegram
+        if: always()
+        run: |
+          curl -X POST https://YOUR_NGROK_URL/notify \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"${{ github.repository }}\",
+              \"status\": \"${{ job.status }}\",
+              \"url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"pusher\": \"${{ github.actor }}\",
+              \"commit_message\": \"${{ github.event.head_commit.message }}\",
+              \"commit_id\": \"${{ github.event.head_commit.id }}\",
+              \"changed_files\": \"${{ env.CHANGED_FILES }}\"
+            }"
