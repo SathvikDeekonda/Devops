@@ -12,19 +12,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Collect commit info
-        id: info
+      # 1️⃣ Notify build start
+      - name: Notify Build Start
         run: |
-          CHANGED=$(git diff --name-only HEAD^ HEAD | tr '\n' ',' | sed 's/,$//')
-          echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
+          echo "Sending 'build started' notification..."
+          curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"repo\": \"${{ github.repository }}\",
+              \"status\": \"started\",
+              \"branch\": \"${{ github.ref_name }}\",
+              \"pusher\": \"${{ github.actor }}\",
+              \"commit_message\": \"${{ github.event.head_commit.message }}\",
+              \"commit_id\": \"${{ github.event.head_commit.id }}\"
+            }"
 
       - name: Simulate build
-        run: echo "Building project..."
+        run: |
+          echo "Building project..."
+          sleep 5  # simulate build time
 
-      - name: Notify Telegram
+      # 2️⃣ Notify build completion
+      - name: Notify Build Completion
         if: always()
         run: |
-          echo "Sending build notification..."
+          echo "Sending 'build completed' notification..."
           curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
             -H "Content-Type: application/json" \
             -d "{
@@ -34,6 +46,5 @@ jobs:
               \"branch\": \"${{ github.ref_name }}\",
               \"pusher\": \"${{ github.actor }}\",
               \"commit_message\": \"${{ github.event.head_commit.message }}\",
-              \"commit_id\": \"${{ github.event.head_commit.id }}\",
-              \"changed_files\": \"${{ env.CHANGED_FILES }}\"
+              \"commit_id\": \"${{ github.event.head_commit.id }}\"
             }"
