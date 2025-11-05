@@ -15,9 +15,8 @@ jobs:
       - name: Collect commit info
         id: info
         run: |
-          echo "CHANGED_FILES<<EOF" >> $GITHUB_ENV
-          git diff --name-only HEAD^ HEAD >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          CHANGED=$(git diff --name-only HEAD^ HEAD | tr '\n' ',' | sed 's/,$//')
+          echo "CHANGED_FILES=$CHANGED" >> $GITHUB_ENV
 
       - name: Simulate build
         run: echo "Building project..."
@@ -25,6 +24,7 @@ jobs:
       - name: Notify Telegram
         if: always()
         run: |
+          echo "Sending build notification..."
           curl -X POST https://avril-parallelepipedous-unlethally.ngrok-free.dev/notify \
             -H "Content-Type: application/json" \
             -d "{
@@ -37,4 +37,3 @@ jobs:
               \"commit_id\": \"${{ github.event.head_commit.id }}\",
               \"changed_files\": \"${{ env.CHANGED_FILES }}\"
             }"
-
